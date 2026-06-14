@@ -148,13 +148,9 @@ function callClaude(userOverride,isOpening){
   isLoading=true;
   var loadingEl=addMsg('Thinking...','loading');
   var messages=isOpening?[{role:'user',content:userOverride}]:history;
-  fetch('https://api.anthropic.com/v1/messages',{
+fetch('/.netlify/functions/chat',{
     method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'x-api-key':API_KEY,
-      'anthropic-version':'2023-06-01'
-    },
+    headers:{'Content-Type':'application/json'},
     body:JSON.stringify({
       model:'claude-sonnet-4-6',
       max_tokens:300,
