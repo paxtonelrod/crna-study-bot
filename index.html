@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CRNA Study Bot</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f3ee; color: #2c2820; padding: 1rem; }
+h1 { font-size: 18px; font-weight: 600; color: #2c3e52; margin-bottom: 4px; }
+.subtitle { font-size: 13px; color: #6b7a6a; margin-bottom: 1.25rem; }
+.unit-badge { display: inline-block; background: #FAEEDA; color: #633806; font-size: 11px; padding: 4px 10px; border-radius: 20px; margin-bottom: 1.25rem; font-weight: 500; }
+.mode-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 1.25rem; }
+.mode-card { background: #fff; border: 1px solid #ddd; border-radius: 10px; padding: 12px 14px; cursor: pointer; text-align: left; }
+.mode-card:hover { background: #f0f4ec; border-color: #4a6741; }
+.mode-card.active { border: 2px solid #4a6741; background: #f0f4ec; }
+.mode-title { font-size: 14px; font-weight: 600; color: #2c3e52; margin-bottom: 3px; }
+.mode-desc { font-size: 12px; color: #6b7a6a; line-height: 1.4; }
+.input-area { margin-bottom: 1rem; display: none; }
+.input-area.show { display: block; }
+.input-area label { font-size: 12px; color: #6b7a6a; margin-bottom: 6px; display: block; }
+.topic-input { width: 100%; font-size: 14px; padding: 10px 14px; border-radius: 8px; border: 1px solid #ccc; background: #fff; color: #2c2820; }
+.start-btn { margin-top: 10px; background: #2c3e52; color: #d4e8c8; border: none; border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.start-btn:hover { background: #3a4f66; }
+.auto-btn { background: #4a6741; color: #edf5e8; border: none; border-radius: 8px; padding: 10px 20px; font-size: 13px; font-weight: 600; cursor: pointer; margin-bottom: 1rem; display: none; }
+.auto-btn.show { display: inline-block; }
+.auto-btn:hover { background: #3d5635; }
+.chat { display: none; background: #fff; border: 1px solid #ddd; border-radius: 10px; overflow: hidden; margin-bottom: 1rem; }
+.chat.show { display: block; }
+.chat-topic { background: #2c3e52; padding: 10px 16px; font-size: 11px; color: #d4e8c8; font-weight: 600; letter-spacing: 0.05em; }
+.chat-msgs { padding: 1rem; display: flex; flex-direction: column; gap: 12px; min-height: 240px; max-height: 420px; overflow-y: auto; }
+.msg { padding: 10px 14px; border-radius: 10px; font-size: 14px; line-height: 1.6; max-width: 88%; }
+.msg-bot { background: #f0f4ec; color: #27500A; border: 1px solid #c8d8c0; align-self: flex-start; }
+.msg-user { background: #e8edf5; color: #0C447C; border: 1px solid #c0c8dc; align-self: flex-end; }
+.msg-loading { background: #f0f4ec; color: #4a6741; border: 1px solid #c8d8c0; align-self: flex-start; font-style: italic; font-size: 13px; }
+.chat-input-row { border-top: 1px solid #eee; padding: 10px 12px; display: flex; gap: 8px; background: #fafafa; }
+.chat-input { flex: 1; font-size: 14px; padding: 8px 12px; border-radius: 8px; border: 1px solid #ccc; background: #fff; color: #2c2820; }
+.send-btn { background: #2c3e52; color: #d4e8c8; border: none; border-radius: 8px; padding: 8px 16px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.send-btn:hover { background: #3a4f66; }
+.reset-btn { background: transparent; border: 1px solid #ccc; border-radius: 8px; padding: 8px 14px; font-size: 12px; color: #6b7a6a; cursor: pointer; }
+.reset-btn:hover { background: #f0f0f0; }
+.bottom-row { display: flex; gap: 8px; }
+</style>
+</head>
+<body>
+
+<h1>CRNA Study Bot</h1>
+<p class="subtitle">Learn through conversation — not memorization.</p>
+<div class="unit-badge">Current Apex focus: Units 3 & 4 — Cardiovascular & Pharm 1</div>
+
+<div class="mode-row">
+  <div class="mode-card" id="mode-auto" onclick="setMode('auto')">
+    <div class="mode-title">Guide me</div>
+    <div class="mode-desc">Bot picks a high-yield concept from your current Apex unit and leads the session</div>
+  </div>
+  <div class="mode-card" id="mode-free" onclick="setMode('free')">
+    <div class="mode-title">I'll pick the topic</div>
+    <div class="mode-desc">Type any concept, drug, or scenario and we go deep together</div>
+  </div>
+</div>
+
+<button class="auto-btn" id="auto-btn" onclick="startAuto()">Start guided session</button>
+
+<div class="input-area" id="input-area">
+  <label>What do you want to learn about?</label>
+  <input class="topic-input" id="topic-input" type="text" placeholder="e.g. vasopressors, MAC values, Frank-Starling law, spinal anesthesia..."/>
+  <br>
+  <button class="start-btn" onclick="startFree()">Start session</button>
+</div>
+
+<div class="chat" id="chat">
+  <div class="chat-topic" id="chat-topic">TOPIC</div>
+  <div class="chat-msgs" id="chat-msgs"></div>
+  <div class="chat-input-row">
+    <input class="chat-input" id="chat-input" type="text" placeholder="Type your response..." onkeydown="if(event.key==='Enter')sendMsg()"/>
+    <button class="send-btn" onclick="sendMsg()">Send</button>
+  </div>
+</div>
+
+<div class="bottom-row" id="bottom-row" style="display:none;">
+  <button class="reset-btn" onclick="resetBot()">Start new topic</button>
+</div>
+
+<script>
+var API_KEY='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';
+var mode='',history=[],topic='',isLoading=false;
+var apexUnits='Units 3 and 4: Cardiovascular physiology and Pharmacology Part 1';
+var autoTopics=[
+  'coronary perfusion pressure and why it matters clinically',
+  'Frank-Starling law and how preload affects cardiac output',
+  'volatile anesthetic MAC values and what factors change them',
+  'the difference between depolarizing and non-depolarizing neuromuscular blockers',
+  'vasopressor mechanisms and when to choose one over another',
+  'how propofol works and why it causes hypotension',
+  'cardiac output and the variables that control it',
+  'sympathetic vs parasympathetic effects on the heart'
+];
+
+function setMode(m){
+  mode=m;
+  document.getElementById('mode-auto').classList.remove('active');
+  document.getElementById('mode-free').classList.remove('active');
+  document.getElementById('mode-'+m).classList.add('active');
+  document.getElementById('input-area').className='input-area'+(m==='free'?' show':'');
+  document.getElementById('auto-btn').className='auto-btn'+(m==='auto'?' show':'');
+}
+
+function startAuto(){
+  topic=autoTopics[Math.floor(Math.random()*autoTopics.length)];
+  beginSession(topic);
+}
+
+function startFree(){
+  var val=document.getElementById('topic-input').value.trim();
+  if(!val)return;
+  topic=val;
+  beginSession(topic);
+}
+
+function beginSession(t){
+  history=[];
+  document.getElementById('chat').classList.add('show');
+  document.getElementById('chat-topic').textContent=t.toUpperCase();
+  document.getElementById('chat-msgs').innerHTML='';
+  document.getElementById('bottom-row').style.display='flex';
+  document.getElementById('input-area').className='input-area';
+  document.getElementById('auto-btn').className='auto-btn';
+  var opening='Start a Socratic learning session about: '+t+'. Begin with one open-ended question that probes what the student already knows. Keep it to 2-3 sentences max. Do not lecture. Just ask.';
+  callClaude(opening,true);
+}
+
+function buildSystem(){
+  return 'You are a masterful CRNA educator using the Socratic method to help a senior CRNA student at Middle Tennessee School of Anesthesia prepare for NBCRNA boards. The student has ADHD, learns best through interaction and conversation rather than reading, and needs concepts broken into small digestible pieces. Your rules: 1) Never lecture or dump information. 2) Always respond with a question or a short insight followed by a question. 3) If the student is wrong, do not just correct them — ask a follow-up that guides them to the right answer. 4) Use clinical analogies and real OR scenarios to make concepts concrete. 5) Keep every response under 4 sentences. 6) Build on what they say — meet them where they are. 7) If they are stuck, give a small hint and ask again. Current Apex focus: '+apexUnits+'. Topic this session: '+topic+'.';
+}
+
+function sendMsg(){
+  if(isLoading)return;
+  var input=document.getElementById('chat-input');
+  var val=input.value.trim();
+  if(!val)return;
+  input.value='';
+  addMsg(val,'user');
+  history.push({role:'user',content:val});
+  callClaude(null,false);
+}
+
+function callClaude(userOverride,isOpening){
+  isLoading=true;
+  var loadingEl=addMsg('Thinking...','loading');
+  var messages=isOpening?[{role:'user',content:userOverride}]:history;
+  fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':API_KEY,
+      'anthropic-version':'2023-06-01'
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-6',
+      max_tokens:300,
+      system:buildSystem(),
+      messages:messages
+    })
+  })
+  .then(function(r){return r.json();})
+  .then(function(data){
+    loadingEl.remove();
+    var text=data.content&&data.content[0]?data.content[0].text:'Something went wrong. Try again.';
+    addMsg(text,'bot');
+    history.push({role:'assistant',content:text});
+    isLoading=false;
+    document.getElementById('chat-input').focus();
+  })
+  .catch(function(){
+    loadingEl.remove();
+    addMsg('Connection issue — check your network and try again.','bot');
+    isLoading=false;
+  });
+}
+
+function addMsg(text,type){
+  var msgs=document.getElementById('chat-msgs');
+  var el=document.createElement('div');
+  el.className='msg msg-'+type;
+  el.textContent=text;
+  msgs.appendChild(el);
+  msgs.scrollTop=msgs.scrollHeight;
+  return el;
+}
+
+function resetBot(){
+  history=[];topic='';mode='';
+  document.getElementById('chat').classList.remove('show');
+  document.getElementById('bottom-row').style.display='none';
+  document.getElementById('mode-auto').classList.remove('active');
+  document.getElementById('mode-free').classList.remove('active');
+  document.getElementById('topic-input').value='';
+  document.getElementById('chat-msgs').innerHTML='';
+}
+</script>
+</body>
+</html>
